@@ -61,9 +61,16 @@ function harang_insta_slider_shortcode($atts) {
     <style>
         .harang-insta-wrapper {
             position: relative;
-            /* Container width: 1200px (slider) + 120px for 2 arrows (40px + 20px margin each side) = 1320px max */
+            /* Force the wrapper to break out of Elementor's 1200px container */
+            width: calc(100% + 120px); 
             max-width: 1320px;
-            margin: 40px auto; 
+            margin: 40px 0;
+            
+            /* Center the oversized wrapper within the parent */
+            position: relative;
+            left: 50%;
+            transform: translateX(-50%);
+            
             padding: 0 60px; /* Space reserved specifically for arrows left and right */
             box-sizing: border-box;
         }
