@@ -29,25 +29,26 @@ def load_environment():
     return target_account, wp_url, wp_username, wp_app_password, rapidapi_key
 
 def fetch_instagram_posts(target_account, rapidapi_key, limit=12):
-    logging.info(f"Fetching posts from {target_account} using Instagram Scraper Stable API...")
+    logging.info(f"Fetching posts from {target_account} using Instagram120 API...")
     
-    url = "https://instagram-scraper-stable-api.p.rapidapi.com/get_ig_user_posts.php"
-    querystring = {"user_name": target_account}
+    url = "https://instagram120.p.rapidapi.com/api/instagram/posts"
+    payload = {"username": target_account, "maxId": ""}
     headers = {
         "x-rapidapi-key": rapidapi_key,
-        "x-rapidapi-host": "instagram-scraper-stable-api.p.rapidapi.com"
+        "x-rapidapi-host": "instagram120.p.rapidapi.com",
+        "Content-Type": "application/json"
     }
 
     try:
-        response = requests.get(url, headers=headers, params=querystring)
+        response = requests.post(url, json=payload, headers=headers)
         if response.status_code != 200:
             logging.error(f"RapidAPI request failed: {response.status_code} - {response.text}")
             return []
             
         data = response.json()
         
-        # Structure for instagram-scraper-stable-api
-        items = data.get('data', {}).get('items', [])
+        # Structure for instagram120
+        items = data.get('result', [])
         
         posts_data = []
         for item in items:
@@ -55,14 +56,15 @@ def fetch_instagram_posts(target_account, rapidapi_key, limit=12):
                 break
                 
             code = item.get('code')
+            
             # Extract highest quality image URL
             image_url = ''
-            if item.get('image_versions2'):
-                candidates = item['image_versions2'].get('candidates', [])
-                if candidates:
-                    image_url = candidates[0].get('url')
-            if not image_url and item.get('thumbnail_url'):
-                image_url = item.get('thumbnail_url')
+            if item.get('carousel_media') and len(item['carousel_media']) > 0:
+                first_media = item['carousel_media'][0]
+                if first_media.get('image_versions2') and first_media['image_versions2'].get('candidates'):
+                    image_url = first_media['image_versions2']['candidates'][0].get('url')
+            elif item.get('image_versions2') and item['image_versions2'].get('candidates'):
+                image_url = item['image_versions2']['candidates'][0].get('url')
                 
             # Extract caption
             caption = ''
