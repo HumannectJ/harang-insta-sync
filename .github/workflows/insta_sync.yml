@@ -25,6 +25,6 @@ jobs:
           WP_URL: ${{ secrets.WP_URL }}
           WP_USERNAME: ${{ secrets.WP_USERNAME }}
           WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
-          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           TARGET_IG_ACCOUNT: ${{ secrets.TARGET_IG_ACCOUNT }}
         run: python insta_sync.py

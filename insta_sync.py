@@ -1,13 +1,10 @@
 import os
 import requests
-import instaloader
 from dotenv import load_dotenv
 import logging
-import tempfile
 import time
 from datetime import datetime
 from requests.auth import HTTPBasicAuth
-from fp.fp import FreeProxy
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -23,74 +20,85 @@ def load_environment():
     wp_url = os.getenv("WP_URL", "").rstrip("/")
     wp_username = os.getenv("WP_USERNAME")
     wp_app_password = os.getenv("WP_APP_PASSWORD")
+    rapidapi_key = os.getenv("RAPIDAPI_KEY")
     
-    if not all([wp_url, wp_username, wp_app_password]):
-        logging.error("Missing WordPress credentials in .env file.")
+    if not all([wp_url, wp_username, wp_app_password, rapidapi_key]):
+        logging.error("Missing credentials in .env file (WordPress credentials or RAPIDAPI_KEY).")
         exit(1)
         
-    return target_account, wp_url, wp_username, wp_app_password
+    return target_account, wp_url, wp_username, wp_app_password, rapidapi_key
 
-def fetch_instagram_posts(target_account, limit=12):
-    L = instaloader.Instaloader(
-        download_pictures=False,
-        download_videos=False,
-        download_video_thumbnails=False,
-        download_geotags=False,
-        download_comments=False,
-        save_metadata=False,
-        compress_json=False
-    )
+def fetch_instagram_posts(target_account, rapidapi_key, limit=12):
+    logging.info(f"Fetching posts from {target_account} using RapidAPI...")
     
-    ig_sessionid = os.getenv("IG_SESSIONID")
-    if ig_sessionid:
-        try:
-            # Inject session id cookie
-            L.context._session.cookies.set("sessionid", ig_sessionid, domain=".instagram.com")
-            # Try to fetch current user to verify session is working
-            L.context.username = "studiourang.crawler" # Give it a dummy username for internal context 
-            L.test_login()
-            logging.info("Successfully logged in using session ID")
-        except Exception as e:
-            logging.warning(f"Failed to login with session ID: {e}")
+    url = "https://instagram-scraper-api2.p.rapidapi.com/v1/info"
+    querystring = {"username_or_id_or_url": target_account}
+    headers = {
+        "x-rapidapi-key": rapidapi_key,
+        "x-rapidapi-host": "instagram-scraper-api2.p.rapidapi.com"
+    }
+
+    try:
+        response = requests.get(url, headers=headers, params=querystring)
+        if response.status_code != 200:
+            logging.error(f"RapidAPI request failed: {response.status_code} - {response.text}")
+            return []
             
-    logging.info(f"Fetching posts from {target_account}...")
-    
-    posts_data = []
-    
-    # Try fetching up to 5 times using different proxies
-    for attempt in range(5):
-        try:
-            proxy = FreeProxy(rand=True, timeout=3).get()
-            logging.info(f"Attempt {attempt+1}: Using proxy {proxy}")
-            L.context._session.proxies = {"http": proxy, "https": proxy}
-            
-            profile = instaloader.Profile.from_username(L.context, target_account)
-            
-            for post in profile.get_posts():
-                if len(posts_data) >= limit:
-                    break
-                # Skip video or take the thumbnail. Instaloader provides 'url' which is an image.
-                # Even for videos, 'url' points to the thumbnail.
-                posts_data.append({
-                    'shortcode': post.shortcode,
-                    'image_url': post.url,
-                    'caption': post.caption if post.caption else '',
-                    'timestamp': post.date_utc.isoformat(),
-                    'datetime': post.date_utc
-                })
-            
-            if posts_data:
-                logging.info(f"Successfully fetched {len(posts_data)} posts via proxy {proxy}")
-                break  # Break out of attempts loop if successful
+        data = response.json()
+        
+        # Depending on API response structure, we navigate to the timeline media
+        # This structure varies by API, but usually it's under data.items or data.edge_owner_to_timeline_media
+        items = data.get('data', {}).get('items', [])
+        
+        posts_data = []
+        for item in items:
+            if len(posts_data) >= limit:
+                break
                 
-        except Exception as e:
-            logging.warning(f"Attempt {attempt+1} failed with proxy {proxy if 'proxy' in locals() else 'None'}: {e}")
-            time.sleep(2)
+            code = item.get('code')
+            # Extract highest quality image URL
+            image_url = ''
+            if item.get('image_versions2'):
+                candidates = item['image_versions2'].get('candidates', [])
+                if candidates:
+                    image_url = candidates[0].get('url')
+            if not image_url and item.get('thumbnail_url'):
+                image_url = item.get('thumbnail_url')
+                
+            # Extract caption
+            caption = ''
+            caption_dict = item.get('caption')
+            if caption_dict and isinstance(caption_dict, dict):
+                caption = caption_dict.get('text', '')
+                
+            # Extract timestamp
+            taken_at = item.get('taken_at')
+            if taken_at:
+                dt = datetime.fromtimestamp(taken_at)
+                timestamp = dt.isoformat()
+            else:
+                dt = datetime.now()
+                timestamp = dt.isoformat()
+                
+            if code and image_url:
+                posts_data.append({
+                    'shortcode': code,
+                    'image_url': image_url,
+                    'caption': caption,
+                    'timestamp': timestamp,
+                    'datetime': dt
+                })
+                
+        if posts_data:
+            logging.info(f"Successfully fetched {len(posts_data)} posts via RapidAPI")
+        else:
+            logging.warning("No posts found in the RapidAPI response.")
             
-    if not posts_data:
-        logging.error("Failed to fetch posts after all proxy attempts.")
-         
-    return posts_data
+        return posts_data
+        
+    except Exception as e:
+        logging.error(f"Error fetching from RapidAPI: {e}")
+        return []
 
 def get_existing_wp_media(wp_url, auth):
     api_url = f"{wp_url}/wp-json/wp/v2/media"
@@ -192,11 +200,11 @@ def cleanup_wp_media(existing_media, wp_url, auth, keep_limit=12):
             logging.error(f"Error deleting media ID {media_id}: {e}")
 
 def main():
-    target_account, wp_url, wp_username, wp_app_password = load_environment()
+    target_account, wp_url, wp_username, wp_app_password, rapidapi_key = load_environment()
     auth = HTTPBasicAuth(wp_username, wp_app_password)
     
     # 1. Fetch from Instagram
-    posts = fetch_instagram_posts(target_account, limit=12)
+    posts = fetch_instagram_posts(target_account, rapidapi_key, limit=12)
     if not posts:
         logging.info("No posts found or failed to fetch.")
         return
