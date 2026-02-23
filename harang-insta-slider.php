@@ -59,17 +59,23 @@ function harang_insta_slider_shortcode($atts) {
     ob_start();
     ?>
     <style>
+        .harang-insta-wrapper {
+            position: relative;
+            padding: 0 50px; /* Space for the external arrows */
+            margin: 20px 0;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
         .harang-insta-container {
             width: 100%;
             overflow: hidden;
-            margin: 20px 0;
-            position: relative;
+            border-radius: 8px; /* Optional overall border */
         }
         .swiper-slide.insta-slide {
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 10px;
             box-sizing: border-box;
         }
         .insta-slide a {
@@ -77,25 +83,25 @@ function harang_insta_slider_shortcode($atts) {
             width: 100%;
             position: relative;
             overflow: hidden;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 8px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
         .insta-slide img {
             width: 100%;
             height: auto;
             object-fit: cover;
-            aspect-ratio: 1/1;
+            aspect-ratio: 4/5; /* Instagram Vertical Feed Ratio */
             transition: transform 0.4s ease;
             display: block;
         }
         .insta-slide a:hover img {
-            transform: scale(1.05);
+            transform: scale(1.03);
         }
         /* Instagram icon overlay */
         .insta-slide .overlay {
             position: absolute;
             top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,0.2);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -108,29 +114,44 @@ function harang_insta_slider_shortcode($atts) {
         .insta-slide .overlay svg {
             width: 40px; height: 40px; fill: white;
         }
-        .harang-insta-container .swiper-pagination {
-            position: relative;
-            margin-top: 15px;
-        }
-        /* Make nav buttons smaller and more elegant */
-        .harang-insta-container .swiper-button-next,
-        .harang-insta-container .swiper-button-prev {
-            color: #fff;
-            background: rgba(0,0,0,0.5);
-            width: 36px;
-            height: 36px;
+        
+        /* Navigation Buttons */
+        .harang-insta-wrapper .swiper-button-next,
+        .harang-insta-wrapper .swiper-button-prev {
+            color: #555; /* Dark gray arrow */
+            background: #fff; /* White circle background */
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            transform: scale(0.7);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            margin: 0;
         }
-        .harang-insta-container .swiper-button-next::after,
-        .harang-insta-container .swiper-button-prev::after {
+        .harang-insta-wrapper .swiper-button-next {
+            right: 0;
+        }
+        .harang-insta-wrapper .swiper-button-prev {
+            left: 0;
+        }
+        .harang-insta-wrapper .swiper-button-next::after,
+        .harang-insta-wrapper .swiper-button-prev::after {
             font-size: 16px;
             font-weight: bold;
         }
+        
+        .swiper-button-next.swiper-button-disabled, 
+        .swiper-button-prev.swiper-button-disabled {
+            opacity: 0.35;
+            cursor: auto;
+            pointer-events: none;
+        }
     </style>
 
-    <div class="harang-insta-container swiper mySwiperInsta">
-        <div class="swiper-wrapper">
+    <div class="harang-insta-wrapper">
+        <div class="harang-insta-container swiper mySwiperInsta">
+            <div class="swiper-wrapper">
             <?php foreach ($valid_images as $img): 
                 $img_url = wp_get_attachment_image_url($img->ID, 'large');
                 $shortcode = $img->post_title; // Python script sets 'title' to the shortcode
@@ -147,10 +168,11 @@ function harang_insta_slider_shortcode($atts) {
                 </div>
             <?php endforeach; ?>
         </div>
-        <div class="swiper-pagination"></div>
-        <div class="swiper-button-next"></div>
-        <div class="swiper-button-prev"></div>
+        <!-- Pagination removed, using only navigation -->
     </div>
+    <div class="swiper-button-next"></div>
+    <div class="swiper-button-prev"></div>
+</div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -159,18 +181,14 @@ function harang_insta_slider_shortcode($atts) {
                     slidesPerView: 1,
                     spaceBetween: 10,
                     loop: false,
-                    pagination: {
-                        el: ".swiper-pagination",
-                        clickable: true,
-                    },
                     navigation: {
-                        nextEl: '.swiper-button-next',
-                        prevEl: '.swiper-button-prev',
+                        nextEl: '.harang-insta-wrapper .swiper-button-next',
+                        prevEl: '.harang-insta-wrapper .swiper-button-prev',
                     },
                     breakpoints: {
                         480: { slidesPerView: 2, spaceBetween: 15 },
-                        768: { slidesPerView: 3, spaceBetween: 20 },
-                        1024: { slidesPerView: 4, spaceBetween: 20 },
+                        768: { slidesPerView: 3, spaceBetween: 15 },
+                        1024: { slidesPerView: 5, spaceBetween: 15 },
                     }
                 });
             }
