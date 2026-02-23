@@ -47,13 +47,17 @@ def fetch_instagram_posts(target_account, rapidapi_key, limit=12):
             
         data = response.json()
         
-        # Structure for instagram120
-        items = data.get('result', [])
+        # Structure for instagram120: result -> edges -> [ { node: { code, caption... } } ]
+        edges = data.get('result', {}).get('edges', [])
         
         posts_data = []
-        for item in items:
+        for edge in edges:
             if len(posts_data) >= limit:
                 break
+                
+            item = edge.get('node', {})
+            if not item:
+                continue
                 
             code = item.get('code')
             
