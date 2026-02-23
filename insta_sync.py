@@ -4,8 +4,10 @@ import instaloader
 from dotenv import load_dotenv
 import logging
 import tempfile
+import time
 from datetime import datetime
 from requests.auth import HTTPBasicAuth
+from fp.fp import FreeProxy
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -52,28 +54,41 @@ def fetch_instagram_posts(target_account, limit=12):
             logging.warning(f"Failed to login with session ID: {e}")
             
     logging.info(f"Fetching posts from {target_account}...")
-    try:
-        profile = instaloader.Profile.from_username(L.context, target_account)
-    except Exception as e:
-        logging.error(f"Error fetching profile: {e}")
-        return []
-
+    
     posts_data = []
-    try:
-        for post in profile.get_posts():
-            if len(posts_data) >= limit:
-                break
-            # Skip video or take the thumbnail. Instaloader provides 'url' which is an image.
-            # Even for videos, 'url' points to the thumbnail.
-            posts_data.append({
-                'shortcode': post.shortcode,
-                'image_url': post.url,
-                'caption': post.caption if post.caption else '',
-                'timestamp': post.date_utc.isoformat(),
-                'datetime': post.date_utc
-            })
-    except Exception as e:
-         logging.error(f"Error iterating posts: {e}")
+    
+    # Try fetching up to 5 times using different proxies
+    for attempt in range(5):
+        try:
+            proxy = FreeProxy(rand=True, timeout=3).get()
+            logging.info(f"Attempt {attempt+1}: Using proxy {proxy}")
+            L.context._session.proxies = {"http": proxy, "https": proxy}
+            
+            profile = instaloader.Profile.from_username(L.context, target_account)
+            
+            for post in profile.get_posts():
+                if len(posts_data) >= limit:
+                    break
+                # Skip video or take the thumbnail. Instaloader provides 'url' which is an image.
+                # Even for videos, 'url' points to the thumbnail.
+                posts_data.append({
+                    'shortcode': post.shortcode,
+                    'image_url': post.url,
+                    'caption': post.caption if post.caption else '',
+                    'timestamp': post.date_utc.isoformat(),
+                    'datetime': post.date_utc
+                })
+            
+            if posts_data:
+                logging.info(f"Successfully fetched {len(posts_data)} posts via proxy {proxy}")
+                break  # Break out of attempts loop if successful
+                
+        except Exception as e:
+            logging.warning(f"Attempt {attempt+1} failed with proxy {proxy if 'proxy' in locals() else 'None'}: {e}")
+            time.sleep(2)
+            
+    if not posts_data:
+        logging.error("Failed to fetch posts after all proxy attempts.")
          
     return posts_data
 
