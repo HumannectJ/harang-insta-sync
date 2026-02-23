@@ -190,7 +190,7 @@ function harang_insta_slider_shortcode($atts) {
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof Swiper !== 'undefined') {
                 new Swiper('.mySwiperInsta', {
-                    slidesPerView: 1,
+                    slidesPerView: 2, /* 2 slides on mobile by default */
                     spaceBetween: 10,
                     loop: true,
                     autoplay: {
@@ -202,8 +202,8 @@ function harang_insta_slider_shortcode($atts) {
                         prevEl: '.harang-insta-wrapper .swiper-button-prev',
                     },
                     breakpoints: {
-                        480: { slidesPerView: 2, spaceBetween: 15 },
-                        768: { slidesPerView: 3, spaceBetween: 15 },
+                        480: { slidesPerView: 3, spaceBetween: 15 },
+                        768: { slidesPerView: 4, spaceBetween: 15 },
                         1024: { slidesPerView: 5, spaceBetween: 15 },
                     }
                 });
