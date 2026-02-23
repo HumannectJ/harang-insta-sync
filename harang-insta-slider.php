@@ -185,7 +185,11 @@ function harang_insta_slider_shortcode($atts) {
                 new Swiper('.mySwiperInsta', {
                     slidesPerView: 1,
                     spaceBetween: 10,
-                    loop: false,
+                    loop: true,
+                    autoplay: {
+                        delay: 3000,
+                        disableOnInteraction: false,
+                    },
                     navigation: {
                         nextEl: '.harang-insta-wrapper .swiper-button-next',
                         prevEl: '.harang-insta-wrapper .swiper-button-prev',
