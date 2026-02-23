@@ -61,14 +61,17 @@ function harang_insta_slider_shortcode($atts) {
     <style>
         .harang-insta-wrapper {
             position: relative;
-            padding: 0 50px; /* Space for the external arrows */
-            margin: 20px 0;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
+            /* Container width: 1200px (slider) + 120px for 2 arrows (40px + 20px margin each side) = 1320px max */
+            max-width: 1320px;
+            margin: 40px auto; 
+            padding: 0 60px; /* Space reserved specifically for arrows left and right */
+            box-sizing: border-box;
         }
         .harang-insta-container {
+            /* The actual slider area is exactly 1200px (or 100% up to 1200px) */
+            max-width: 1200px;
             width: 100%;
+            margin: 0 auto;
             overflow: hidden;
             border-radius: 8px; /* Optional overall border */
         }
@@ -120,20 +123,22 @@ function harang_insta_slider_shortcode($atts) {
         .harang-insta-wrapper .swiper-button-prev {
             color: #555; /* Dark gray arrow */
             background: #fff; /* White circle background */
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
             margin: 0;
+            z-index: 10;
         }
+        /* Position arrows completely outside the 1200px container */
         .harang-insta-wrapper .swiper-button-next {
-            right: 0;
+            right: 0; /* Aligned to the very 0 edge of the 1320px wrapper */
         }
         .harang-insta-wrapper .swiper-button-prev {
-            left: 0;
+            left: 0; /* Aligned to the very 0 edge of the 1320px wrapper */
         }
         .harang-insta-wrapper .swiper-button-next::after,
         .harang-insta-wrapper .swiper-button-prev::after {
