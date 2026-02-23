@@ -39,14 +39,17 @@ def fetch_instagram_posts(target_account, limit=12):
         compress_json=False
     )
     
-    ig_user = os.getenv("IG_USERNAME")
-    ig_pass = os.getenv("IG_PASSWORD")
-    if ig_user and ig_pass:
+    ig_sessionid = os.getenv("IG_SESSIONID")
+    if ig_sessionid:
         try:
-            L.login(ig_user, ig_pass)
-            logging.info(f"Logged in to Instagram as {ig_user}")
+            # Inject session id cookie
+            L.context._session.cookies.set("sessionid", ig_sessionid, domain=".instagram.com")
+            # Try to fetch current user to verify session is working
+            L.context.username = "studiourang.crawler" # Give it a dummy username for internal context 
+            L.test_login()
+            logging.info("Successfully logged in using session ID")
         except Exception as e:
-            logging.warning(f"Failed to login: {e}")
+            logging.warning(f"Failed to login with session ID: {e}")
             
     logging.info(f"Fetching posts from {target_account}...")
     try:
