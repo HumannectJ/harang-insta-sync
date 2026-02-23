@@ -29,13 +29,13 @@ def load_environment():
     return target_account, wp_url, wp_username, wp_app_password, rapidapi_key
 
 def fetch_instagram_posts(target_account, rapidapi_key, limit=12):
-    logging.info(f"Fetching posts from {target_account} using RapidAPI...")
+    logging.info(f"Fetching posts from {target_account} using Instagram Scraper Stable API...")
     
-    url = "https://instagram-scraper-api2.p.rapidapi.com/v1/info"
-    querystring = {"username_or_id_or_url": target_account}
+    url = "https://instagram-scraper-stable-api.p.rapidapi.com/get_ig_user_posts.php"
+    querystring = {"user_name": target_account}
     headers = {
         "x-rapidapi-key": rapidapi_key,
-        "x-rapidapi-host": "instagram-scraper-api2.p.rapidapi.com"
+        "x-rapidapi-host": "instagram-scraper-stable-api.p.rapidapi.com"
     }
 
     try:
@@ -46,8 +46,7 @@ def fetch_instagram_posts(target_account, rapidapi_key, limit=12):
             
         data = response.json()
         
-        # Depending on API response structure, we navigate to the timeline media
-        # This structure varies by API, but usually it's under data.items or data.edge_owner_to_timeline_media
+        # Structure for instagram-scraper-stable-api
         items = data.get('data', {}).get('items', [])
         
         posts_data = []
