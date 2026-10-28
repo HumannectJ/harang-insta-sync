@@ -1,46 +1,30 @@
-name: Harang one-time encrypted provider transfer
-on: workflow_dispatch
-permissions:
-  contents: read
+name: Instagram to WordPress Sync
+
+on:
+  schedule:
+    - cron: '0 15 * * *' # 매일 한국 시간 자정(UTC 15:00)에 실행
+  workflow_dispatch: # 수동 실행 버튼 활성화
+
 jobs:
-  transfer:
+  sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
     steps:
-      - name: Encrypt existing Instagram existing account session
-        env:
-          HARANG_EXISTING_KEY: ${{ secrets.IG_SESSIONID }}
-          HARANG_EXISTING_ACCOUNT: ${{ secrets.TARGET_IG_ACCOUNT }}
-        shell: bash
-        run: |
-          umask 077
-          cat > public.pem <<'HARANG_PUBLIC_KEY'
-          -----BEGIN PUBLIC KEY-----
-          MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAwYjgUrmlVHrvJG7buGm4
-          0GV8/NbyacKDJ+yv/WFxK7tGeo0SSkI8mMOLxcdabYWBIm/DbEihvx+NBpR8Vcef
-          9fQuZNDuoxU/xypri6zo6Y/VDes4yw8RhESjkgBP+8Y64OVHapHFEzBdSIX7rZH3
-          ICvnVVpJswyV/1y+5V8UbECu8M0K3RzBvKVkfTT6OC1yRGkIWgMN8hcL4lKl8QDb
-          966CJCshJ6D7l4dbXDvlw/IaPBRqIlYTGxQM3JhOTelWy3yC9TVcE3hk+mTqvXfM
-          VgAEHcfhCDuODkNtG6yb6+Yoi2QrXL63JVLHd1Wv/EWiFlcCmOmf/6lQsob3HGGP
-          tLNptacwUvissNDlm8lRH5wIedNSlyseIK6to0eMxnZYLILs2TEya+6nyBmhWwj9
-          KPsCvfALmY8QBO0qwruMs+kktY+X/N9q/S6ZhXftAs3/eWfQLBI4UUtvM7ISLCuP
-          PH+XqvuYHaJop74Rw2KJlRryMKssgau9qv3JqSnQeNQbAgMBAAE=
-          -----END PUBLIC KEY-----
-          HARANG_PUBLIC_KEY
-          python3 - <<'PY'
-          import json, os, pathlib, subprocess
-          key=os.environ.get('HARANG_EXISTING_KEY','')
-          account=os.environ.get('HARANG_EXISTING_ACCOUNT','')
-          assert key and len(key)<220 and len(account)<120, 'EXISTING_PROVIDER_CONFIGURATION_UNAVAILABLE'
-          payload=json.dumps({'IG_SESSIONID':key,'TARGET_IG_ACCOUNT':account},separators=(',',':')).encode()
-          p=subprocess.run(['openssl','pkeyutl','-encrypt','-pubin','-inkey','public.pem','-pkeyopt','rsa_padding_mode:oaep','-pkeyopt','rsa_oaep_md:sha256'],input=payload,capture_output=True)
-          assert p.returncode==0, 'CONFIGURATION_ENCRYPTION_FAILED'
-          pathlib.Path('provider.enc').write_bytes(p.stdout)
-          PY
-      - name: Store encrypted configuration for owner retrieval
-        uses: actions/upload-artifact@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          name: harang-instagram-encrypted-bbe2c8170ea0
-          path: provider.enc
-          retention-days: 1
-          compression-level: 0
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run sync script
+        env:
+          WP_URL: ${{ secrets.WP_URL }}
+          WP_USERNAME: ${{ secrets.WP_USERNAME }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          TARGET_IG_ACCOUNT: ${{ secrets.TARGET_IG_ACCOUNT }}
+        run: python insta_sync.py
